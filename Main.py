@@ -1,11 +1,11 @@
-
-print('Start project')
-import numpy as np
-
-import tensorflow as tf
-from sklearn.model_selection import train_test_split
 import os
+
+import numpy as np
 import pydub
+import tensorflow as tf
+import tflearn
+
+
 def read(f, normalized=False):
     """MP3 to numpy array"""
     a = pydub.AudioSegment.from_mp3(f)
@@ -13,87 +13,94 @@ def read(f, normalized=False):
     if a.channels == 2:
         y = y.reshape((-1, 2))
     if normalized:
-        return a.frame_rate, np.float32(y) / 2**15
+        return a.frame_rate, np.float32(y) / 2 ** 15
     else:
         return a.frame_rate, y
 
 
-x = []
-yy = []
+def to_categorical(vector, nb_classes):
+    if not nb_classes:
+        nb_classes = np.max(vector) + 1
+    Y = np.zeros((len(vector), nb_classes))
+    for id, item in enumerate(vector):
+        Y[id][0] = vector[id]
+        Y[id][1] = 1 - vector[id]
+    return Y
 
-for root, dirs, files in os.walk("./0"):
-    for filename in files:
-        sr, xx = read("./0/" + filename)
-        if np.array(xx).shape[0] == 660096:
-            x.append(np.array(xx[:, 0], dtype=np.float32).reshape(660096, ))
-            # x.append(xx[:,0])
-            yy.append(0)
 
-for root, dirs, files in os.walk("./1"):
-    for filename in files:
-        sr, xx = read("./1/" + filename)
-        if np.array(xx).shape[0] == 660096:
-            x.append(np.array(xx[:, 0], dtype=np.float32).reshape(660096, ))
-            yy.append(1)
-yyy = np.array(yy, dtype=np.float32)
-y = np.reshape(yyy, (len(yyy), 1))
-x = np.array(x)
+def addVectorsToTest(x, y, vector, res):
+    addVector(res, x, np.array(vector[:, 0], dtype=np.float32).reshape(660096, ), y)
+    addVector(res, x, np.array(vector[:, 1], dtype=np.float32).reshape(660096, ), y)
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.1)
 
-# inputs = keras.Input(shape=(784,), name='digits')
-# x = layers.Dense(64, activation='relu', name='dense_1')(inputs)
-# x = layers.Dense(64, activation='relu', name='dense_2')(x)
-# outputs = layers.Dense(10, name='predictions')(x)
-full_len=660096
+def addVector(anwser, x_result, vector, y_result):
+    for i in range(0, last_index, count_shags):
+        x_result.append(vector[i:i + shag])
+        y_result.append(anwser)
+
+
+def readFolder(folder_name, x, y, answer):
+    for root, dirs, files in os.walk(folder_name):
+        for filename in files:
+            sr, vector = read(folder_name + '/' + filename)
+            vector = (vector + 32768) / 65535
+            if np.array(vector).shape[0] == 660096:
+                addVectorsToTest(x, y, vector, answer)
+
+
+full_len = 660096
 len_kyrs = 2
-n = full_len
+
+shag = (int)(full_len / 5)
+last_index = (int)(full_len - shag)
+count_shags = (int)(full_len / 150)
+n = shag
 m = len_kyrs
 r = pow(n / m, 1 / 3)
 k1 = (int)(m * pow(r, 2))
 k2 = (int)(m * r)
 
-import tensorflow as tf;
-from tensorflow import keras;
+x_train = []
+y_train = []
+
+x_test = []
+y_test = []
+
+readFolder("./0", x_train, y_train, 0)
+readFolder("./1", x_train, y_train, 1)
+readFolder("./05", x_train, y_train, 0.5)
+
+readFolder("./0t", x_test, y_test, 0)
+readFolder("./1t", x_test, y_test, 1)
+
+y_train = np.array(y_train, dtype=np.float32)
+y_test = np.array(y_test, dtype=np.float32)
+x_train = np.array(x_train)
+x_test = np.array(x_test)
+
+y_train = to_categorical(y_train, 2)
+y_test = to_categorical(y_test, 2)
 
 
-# def build_model(learning_rate=0.1):
-#     tf.reset_default_graph()
-#     x = tflearn.input_data([None, full_len])
-#     # net = tflearn.batch_normalization(x)
-#     # net1 = tflearn.fully_connected(x, 1, activation='LeakyReLU')
-#     # net2 = tflearn.batch_normalization(net1)
-#     # net3 = tflearn.fully_connected(net2, k2, activation='LeakyReLU')
-#     net4 = tflearn.fully_connected(x, len_kyrs, activation='softmax')
-#     regression = tflearn.regression(
-#         net4,
-#         optimizer='sgd',
-#         learning_rate=learning_rate,
-#         loss='categorical_crossentropy')
-#     model = tflearn.DNN(net4, tensorboard_dir='/tmp/tflearn_logs8/',
-#                         tensorboard_verbose=0)
-#     return model
-# model = build_model()
-# from sklearn.preprocessing import OneHotEncoder
-# enc = OneHotEncoder(sparse=False) # Key here is sparse=False!
-# y_categorical = enc.fit_transform(y.reshape((y.shape[0]),1))
-#
-# model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-# model.fit(x, y_categorical, nb_epoch=20, batch_size=10)\
+def build_model(learning_rate=0.00001):
+    tf.reset_default_graph()
+    net1 = tflearn.input_data([None, shag])
+    net1 = tflearn.batch_normalization(net1)
+    net1 = tflearn.fully_connected(net1, k1, regularizer='L2')
+    net1 = tflearn.dropout(net1, 0.8)
+    net1 = tflearn.fully_connected(net1, k2, regularizer='L2')
+    net1 = tflearn.dropout(net1, 0.8)
+    net1 = tflearn.fully_connected(net1, len_kyrs, activation='softmax')
+    net1 = tflearn.regression(
+        net1,
+        optimizer='adam',
+        learning_rate=learning_rate,
+        loss='binary_crossentropy')
 
+    model = tflearn.DNN(net1)
+    return model
 
-model = keras.Sequential()
-model.add(keras.layers.Dense(1, activation='relu', input_shape=(full_len,)))
-# model.add(keras.layers.Dense(8, activation='relu'))
-# model.add(keras.layers.Dense(8, activation='sigmoid'))
-model.add(keras.layers.Activation('softmax'))
-# adam = keras.optimizers.Adam()
-# model.compile(optimizer=adam, loss='categorical_crossentropy')
-# model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-loss_fn = keras.losses.SparseCategoricalCrossentropy()
-model.compile(loss='mean_squared_error', optimizer='adam', metrics=[keras.metrics.categorical_accuracy])
-
-model.fit(X_train, y_train, epochs=5, batch_size=2)
-a = model.predict(X_test)
-t =3
+model = build_model()
+model.fit(x_train, y_train, validation_set=0.25, show_metric=True, batch_size=250, n_epoch=1)
+result = model.predict(x_test)
+t = 3
