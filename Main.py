@@ -4,7 +4,7 @@ import numpy as np
 import pydub
 import tensorflow as tf
 import tflearn
-
+from datetime import datetime
 
 def read(f, normalized=False):
     """MP3 to numpy array"""
@@ -101,6 +101,15 @@ def build_model(learning_rate=0.00001):
     return model
 
 model = build_model()
-model.fit(x_train, y_train, validation_set=0.25, show_metric=True, batch_size=250, n_epoch=1)
+model.fit(x_train, y_train, validation_set=0.25, show_metric=True, batch_size=250, n_epoch=10)
 result = model.predict(x_test)
+shag = 100 / result.shape[0]
+percentage = 0.0
+for idx, val in enumerate(result):
+    if val[0] > 0.5 and y_test[idx][0] > 0.5 or val[0] < 0.5 and y_test[idx][0] < 0.5:
+        percentage += shag
+print(percentage)
+# date_after_month = datetime.now()
+# name_model = "my_model." + date_after_month.strftime('%Y.%m.%d_%H.%M.%S')
+# model.save('checkpoints/' + name_model + '/' +str(int(percentage)) + "_"+ name_model + '.tflearn')
 t = 3
