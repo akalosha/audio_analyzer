@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pydub
 from tensorflow import keras
-from tensorflow.keras.layers import Activation, Dense, Dropout, BatchNormalization
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 
 
 def read(f, normalized=False):
@@ -81,42 +81,17 @@ x_test = np.array(x_test)
 y_train = to_categorical(y_train, 2)
 y_test = to_categorical(y_test, 2)
 
-
 def build_model(learning_rate=0.00001):
     model = keras.Sequential()
     model.add(Dense(1000, activation='relu', input_shape=(shag,), kernel_regularizer=keras.regularizers.l1(0.01),
     activity_regularizer=keras.regularizers.l2(0.3)))
-    # model.add(Dense(k1/2, activation='relu', input_shape=(shag,)))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
-    # model.add(Dense(1000, activation='relu', input_shape=(shag,)))
-    # model.add(Dense(k1, activation='relu', activity_regularizer=keras.regularizers.l1_l2(l1=0.1, l2=0.01)))
-    # model.add(Dense(k1, activation='relu'))
-    # model.add(BatchNormalization())
-    # model.add(Dropout(0.5))
     model.add(Dense(k2, activation='relu',kernel_regularizer=keras.regularizers.l1(0.01),
     activity_regularizer=keras.regularizers.l2(0.3)))
-    # model.add(Dense(k2, activation='relu'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     model.add(Dense(len_kyrs, activation='softmax'))
-
-    # model.add(keras.layers.Activation('softmax'))
-    # tf.reset_default_graph()
-    # net1 = tflearn.input_data([None, shag])
-    # net1 = tflearn.batch_normalization(net1)
-    # net1 = tflearn.fully_connected(net1, k1, regularizer='L2')
-    # net1 = tflearn.dropout(net1, 0.8)
-    # net1 = tflearn.fully_connected(net1, k2, regularizer='L2')
-    # net1 = tflearn.dropout(net1, 0.8)
-    # net1 = tflearn.fully_connected(net1, len_kyrs, activation='softmax')
-    # net1 = tflearn.regression(
-    #     net1,
-    #     optimizer='adam',
-    #     learning_rate=learning_rate,
-    #     loss='binary_crossentropy')
-
-    # model = tflearn.DNN(net1)
     return model
 
 
@@ -131,14 +106,3 @@ result = model.predict(x_test)
 
 _, accuracy = model.evaluate(x_test, y_test)
 print('Accuracy: %.2f' % (accuracy * 100))
-#
-# shag = 100 / result.shape[0]
-# percentage = 0.0
-# for idx, val in enumerate(result):
-#     if val[0] > 0.5 and y_test[idx][0] > 0.5 or val[0] < 0.5 and y_test[idx][0] < 0.5:
-#         percentage += shag
-# print("percentage = " + str(percentage))
-# date_after_month = datetime.now()
-# name_model = "my_model." + date_after_month.strftime('%Y.%m.%d_%H.%M.%S')
-# model.save('checkpoints/' + name_model + '/' +str(int(percentage)) + "_"+ name_model + '.tflearn')
-t = 3
